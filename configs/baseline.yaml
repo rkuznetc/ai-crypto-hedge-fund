@@ -1,0 +1,9 @@
+symbol: BTC/USDT
+timeframe: 1d
+data_path: data/raw/BTC_USDT_1d.csv
+initial_cash: 10000.0
+fee_rate: 0.001
+train_size: 0.7
+fast_window: 10
+slow_window: 30
+volatility_window: 20
