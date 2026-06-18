@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+
+# uv
+.python-version
+
+# Environment
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data (offline CSVs are local-only; regenerate via scripts/)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Reports (generated at runtime)
+reports/metrics/*
+!reports/metrics/.gitkeep
+reports/figures/*
+!reports/figures/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
