@@ -6,6 +6,12 @@ import pandas as pd
 
 from crypto_hf.data.loader import REQUIRED_COLUMNS
 
+TIMEFRAME_DELTAS: dict[str, pd.Timedelta] = {
+    "1d": pd.Timedelta(days=1),
+    "1h": pd.Timedelta(hours=1),
+    "4h": pd.Timedelta(hours=4),
+}
+
 
 class DataValidationError(ValueError):
     """Raised when OHLCV data fails schema or quality checks."""
@@ -21,13 +27,15 @@ class ValidationResult:
     columns: tuple[str, ...]
 
 
-def validate_ohlcv(df: pd.DataFrame) -> ValidationResult:
+def validate_ohlcv(df: pd.DataFrame, timeframe: str = "1d") -> ValidationResult:
     """Validate OHLCV DataFrame schema and basic data quality."""
     _check_required_columns(df)
     _check_sorted_index(df)
     _check_no_duplicate_timestamps(df)
+    _check_timestamp_frequency(df, timeframe)
     _check_positive_prices(df)
     _check_high_low(df)
+    _check_ohlc_consistency(df)
     _check_volume(df)
     _check_no_missing_close(df)
 
@@ -56,6 +64,23 @@ def _check_no_duplicate_timestamps(df: pd.DataFrame) -> None:
         raise DataValidationError("Duplicate timestamps found")
 
 
+def _check_timestamp_frequency(df: pd.DataFrame, timeframe: str) -> None:
+    if len(df) < 2:
+        return
+
+    expected = TIMEFRAME_DELTAS.get(timeframe)
+    if expected is None:
+        raise DataValidationError(f"Unsupported timeframe for validation: {timeframe}")
+
+    diffs = df.index.to_series().diff().iloc[1:]
+    if not (diffs == expected).all():
+        bad_count = int((diffs != expected).sum())
+        raise DataValidationError(
+            f"Timestamp frequency mismatch for timeframe '{timeframe}': "
+            f"{bad_count} interval(s) differ from {expected}"
+        )
+
+
 def _check_positive_prices(df: pd.DataFrame) -> None:
     for col in ("open", "high", "low", "close"):
         if (df[col] <= 0).any():
@@ -65,6 +90,13 @@ def _check_positive_prices(df: pd.DataFrame) -> None:
 def _check_high_low(df: pd.DataFrame) -> None:
     if (df["high"] < df["low"]).any():
         raise DataValidationError("Found rows where high < low")
+
+
+def _check_ohlc_consistency(df: pd.DataFrame) -> None:
+    if (df["high"] < df["open"]).any() or (df["high"] < df["close"]).any():
+        raise DataValidationError("Found rows where high is below open or close")
+    if (df["low"] > df["open"]).any() or (df["low"] > df["close"]).any():
+        raise DataValidationError("Found rows where low is above open or close")
 
 
 def _check_volume(df: pd.DataFrame) -> None:

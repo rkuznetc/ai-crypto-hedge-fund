@@ -23,7 +23,7 @@ def _valid_df(n: int = 10) -> pd.DataFrame:
 
 
 def test_valid_data_passes() -> None:
-    result = validate_ohlcv(_valid_df())
+    result = validate_ohlcv(_valid_df(), timeframe="1d")
     assert result.row_count == 10
 
 
@@ -45,4 +45,25 @@ def test_negative_prices_raises() -> None:
     df = _valid_df()
     df.loc[df.index[0], "close"] = -1
     with pytest.raises(DataValidationError, match="Non-positive"):
+        validate_ohlcv(df)
+
+
+def test_timestamp_frequency_mismatch_raises() -> None:
+    df = _valid_df()
+    df = df.iloc[[0, 2, 3, 4, 5, 6, 7, 8, 9]]
+    with pytest.raises(DataValidationError, match="Timestamp frequency mismatch"):
+        validate_ohlcv(df, timeframe="1d")
+
+
+def test_high_below_open_raises() -> None:
+    df = _valid_df()
+    df.loc[df.index[0], "high"] = df.loc[df.index[0], "open"] - 1
+    with pytest.raises(DataValidationError, match="high is below open or close"):
+        validate_ohlcv(df)
+
+
+def test_low_above_close_raises() -> None:
+    df = _valid_df()
+    df.loc[df.index[0], "low"] = df.loc[df.index[0], "close"] + 1
+    with pytest.raises(DataValidationError, match="low is above open or close"):
         validate_ohlcv(df)
