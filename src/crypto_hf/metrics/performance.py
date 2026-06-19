@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-TRADING_DAYS = 252
+CRYPTO_PERIODS_PER_YEAR = 365
 
 
 def total_return(equity_curve: pd.Series) -> float:
@@ -17,7 +17,7 @@ def total_return(equity_curve: pd.Series) -> float:
     return end / start - 1.0
 
 
-def cagr(equity_curve: pd.Series, periods_per_year: int = TRADING_DAYS) -> float:
+def cagr(equity_curve: pd.Series, periods_per_year: int = CRYPTO_PERIODS_PER_YEAR) -> float:
     """Compound annual growth rate."""
     if equity_curve.empty or len(equity_curve) < 2:
         return 0.0
@@ -30,7 +30,7 @@ def cagr(equity_curve: pd.Series, periods_per_year: int = TRADING_DAYS) -> float
 
 def annualized_volatility(
     returns: pd.Series,
-    periods_per_year: int = TRADING_DAYS,
+    periods_per_year: int = CRYPTO_PERIODS_PER_YEAR,
 ) -> float:
     """Annualized volatility from periodic returns."""
     clean = returns.dropna()
@@ -45,7 +45,7 @@ def annualized_volatility(
 def sharpe_ratio(
     returns: pd.Series,
     risk_free_rate: float = 0.0,
-    periods_per_year: int = TRADING_DAYS,
+    periods_per_year: int = CRYPTO_PERIODS_PER_YEAR,
 ) -> float:
     """Annualized Sharpe ratio."""
     clean = returns.dropna()
@@ -64,7 +64,7 @@ def sharpe_ratio(
 def sortino_ratio(
     returns: pd.Series,
     risk_free_rate: float = 0.0,
-    periods_per_year: int = TRADING_DAYS,
+    periods_per_year: int = CRYPTO_PERIODS_PER_YEAR,
 ) -> float:
     """Annualized Sortino ratio using downside deviation."""
     clean = returns.dropna()
@@ -89,7 +89,7 @@ def max_drawdown(equity_curve: pd.Series) -> float:
     return float(drawdown.min())
 
 
-def calmar_ratio(equity_curve: pd.Series, periods_per_year: int = TRADING_DAYS) -> float:
+def calmar_ratio(equity_curve: pd.Series, periods_per_year: int = CRYPTO_PERIODS_PER_YEAR) -> float:
     """Calmar ratio: CAGR / |max drawdown|."""
     mdd = max_drawdown(equity_curve)
     if mdd == 0:
@@ -116,17 +116,18 @@ def compute_all_metrics(
     returns: pd.Series,
     trades: pd.DataFrame | None = None,
     positions: pd.Series | None = None,
+    periods_per_year: int = CRYPTO_PERIODS_PER_YEAR,
 ) -> dict[str, float]:
     """Compute full performance metric set."""
     pos = positions if positions is not None else pd.Series(dtype=float)
     return {
         "total_return": total_return(equity_curve),
-        "cagr": cagr(equity_curve),
-        "annualized_volatility": annualized_volatility(returns),
-        "sharpe_ratio": sharpe_ratio(returns),
-        "sortino_ratio": sortino_ratio(returns),
+        "cagr": cagr(equity_curve, periods_per_year),
+        "annualized_volatility": annualized_volatility(returns, periods_per_year),
+        "sharpe_ratio": sharpe_ratio(returns, periods_per_year=periods_per_year),
+        "sortino_ratio": sortino_ratio(returns, periods_per_year=periods_per_year),
         "max_drawdown": max_drawdown(equity_curve),
-        "calmar_ratio": calmar_ratio(equity_curve),
+        "calmar_ratio": calmar_ratio(equity_curve, periods_per_year),
         "number_of_trades": float(number_of_trades(trades)),
         "turnover": turnover(pos),
     }
