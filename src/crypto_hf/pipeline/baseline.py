@@ -55,7 +55,11 @@ def build_features(df: pd.DataFrame, config: BaselineConfig) -> pd.DataFrame:
     featured = add_returns(df)
     featured = add_log_returns(featured)
     featured = add_moving_averages(featured, windows=windows)
-    featured = add_rolling_volatility(featured, window=config.volatility_window)
+    featured = add_rolling_volatility(
+        featured,
+        window=config.volatility_window,
+        annualization_factor=config.annualization_factor,
+    )
     featured = add_drawdown(featured)
     return featured
 
@@ -69,6 +73,8 @@ def run_backtests(
     engine = VectorbtBacktester(
         initial_cash=config.initial_cash,
         fee_rate=config.fee_rate,
+        annualization_factor=config.annualization_factor,
+        slippage=config.slippage,
     )
 
     buy_hold = BuyAndHoldStrategy()
@@ -88,7 +94,7 @@ def run_baseline_pipeline(
 ) -> BaselineOutputs:
     """Execute the full baseline workflow."""
     raw = load_ohlcv_csv(config.data_path)
-    validation = validate_ohlcv(raw)
+    validation = validate_ohlcv(raw, timeframe=config.timeframe)
     features = build_features(raw, config)
     train, test = split_train_test(features, config.train_size)
     results = run_backtests(test, config)
