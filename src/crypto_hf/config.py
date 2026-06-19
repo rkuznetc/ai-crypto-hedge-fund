@@ -15,10 +15,12 @@ class BaselineConfig(BaseModel):
     data_path: Path = Path("data/raw/BTC_USDT_1d.csv")
     initial_cash: float = Field(default=10_000.0, gt=0)
     fee_rate: float = Field(default=0.001, ge=0)
+    slippage: float = Field(default=0.0, ge=0)
     train_size: float = Field(default=0.7, gt=0, lt=1)
     fast_window: int = Field(default=10, gt=0)
     slow_window: int = Field(default=30, gt=0)
     volatility_window: int = Field(default=20, gt=0)
+    annualization_factor: int = Field(default=365, gt=0)
 
     @field_validator("data_path", mode="before")
     @classmethod
