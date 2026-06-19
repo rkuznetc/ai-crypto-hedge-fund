@@ -33,6 +33,7 @@ def add_moving_averages(
 def add_rolling_volatility(
     df: pd.DataFrame,
     window: int,
+    annualization_factor: int = 365,
     returns_col: str = "returns",
 ) -> pd.DataFrame:
     """Add rolling annualized volatility from daily returns."""
@@ -40,7 +41,8 @@ def add_rolling_volatility(
     if returns_col not in out.columns:
         out = add_returns(out)
     out[f"volatility_{window}"] = (
-        out[returns_col].rolling(window=window, min_periods=window).std() * np.sqrt(252)
+        out[returns_col].rolling(window=window, min_periods=window).std()
+        * np.sqrt(annualization_factor)
     )
     return out
 
