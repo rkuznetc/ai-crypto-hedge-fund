@@ -71,6 +71,49 @@ def plot_drawdown(
     return fig
 
 
+def plot_drawdown_comparison(
+    equity_curves: dict[str, pd.Series],
+    title: str = "Drawdown Comparison",
+    save_path: str | Path | None = None,
+) -> plt.Figure:
+    """Plot drawdown curves for multiple strategies."""
+    fig, ax = plt.subplots(figsize=(12, 5))
+    for name, curve in equity_curves.items():
+        drawdown = curve / curve.cummax() - 1.0
+        ax.plot(drawdown.index, drawdown.values, label=name, linewidth=1.0)
+    ax.set_title(title)
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Drawdown")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    return fig
+
+
+def plot_model_prediction_diagnostics(
+    y_true: pd.Series,
+    y_pred: pd.Series,
+    title: str = "Model Prediction Diagnostics",
+    save_path: str | Path | None = None,
+) -> plt.Figure:
+    """Plot actual vs predicted direction over time."""
+    fig, ax = plt.subplots(figsize=(12, 4))
+    ax.plot(y_true.index, y_true.values, label="Actual up", alpha=0.7)
+    ax.plot(y_pred.index, y_pred.values, label="Predicted up", alpha=0.7)
+    ax.set_title(title)
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Direction (0/1)")
+    ax.set_ylim(-0.1, 1.1)
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    return fig
+
+
 def export_metrics_table(
     metrics_by_strategy: dict[str, dict[str, float]],
     save_path: str | Path | None = None,
