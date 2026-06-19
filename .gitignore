@@ -18,9 +18,7 @@ venv/
 # Jupyter
 .ipynb_checkpoints/
 
-# Data (offline CSVs are local-only; regenerate via scripts/)
-data/raw/*
-!data/raw/.gitkeep
+# Data
 data/processed/*
 !data/processed/.gitkeep
 
