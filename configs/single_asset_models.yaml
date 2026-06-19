@@ -1,0 +1,24 @@
+symbol: BTC/USDT
+timeframe: 1d
+data_path: data/raw/BTC_USDT_1d.csv
+initial_cash: 10000.0
+fee_rate: 0.001
+slippage: 0.0
+annualization_factor: 365
+train_size: 0.7
+fast_window: 10
+slow_window: 30
+volatility_window: 20
+return_lags: [1, 2, 3, 5]
+rolling_mean_windows: [5, 10, 20]
+rolling_vol_windows: [10, 20]
+momentum_windows: [5, 10, 20]
+sma_ratio_windows: [10, 20]
+rsi_window: 14
+econometric_lags: 5
+econometric_use_cost_threshold: true
+ml_probability_threshold: 0.5
+logistic_regression_c: 1.0
+logistic_regression_max_iter: 1000
+enable_random_forest: true
+random_forest_n_estimators: 100
