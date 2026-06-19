@@ -39,3 +39,6 @@ dev = [
     "jupyter>=1.0",
     "pytest>=8.0",
 ]
+test = [
+    "pytest>=8.0",
+]

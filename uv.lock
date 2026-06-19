@@ -669,6 +669,9 @@ dev = [
     { name = "jupyter" },
     { name = "pytest" },
 ]
+test = [
+    { name = "pytest" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -692,6 +695,7 @@ dev = [
     { name = "jupyter", specifier = ">=1.0" },
     { name = "pytest", specifier = ">=8.0" },
 ]
+test = [{ name = "pytest", specifier = ">=8.0" }]
 
 [[package]]
 name = "cryptography"
