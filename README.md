@@ -58,13 +58,37 @@ uv run python scripts/run_baseline.py
 uv run python scripts/run_single_asset_models.py
 ```
 
-Compares buy-and-hold, SMA crossover, econometric AR, and ML direction models on the same test period.
+Compares strategy groups on the same **test period**:
 
-Outputs:
+| Group | Strategies |
+|-------|------------|
+| Benchmarks | `buy_and_hold`, `sma_crossover` |
+| Econometric | `econometric_autoreg` |
+| ML | `ml_logistic_regression`, `ml_random_forest`, `ml_gradient_boosting`, `ml_ridge_regression` |
+| Statistical | `stat_zscore_mean_reversion`, `stat_momentum_breakout`, `stat_volatility_regime_filter` |
+| Dummy | `dummy_always_long`, `dummy_always_cash`, `dummy_random_signal` |
+| Ensemble | `ensemble_majority_vote` |
 
-- `reports/metrics/single_asset_model_metrics.csv`
-- `reports/metrics/single_asset_model_classification.csv`
-- `reports/figures/single_asset_model_*.png`
+### Metrics CSV
+
+- `single_asset_model_metrics.csv` — trading metrics (test)
+- `single_asset_model_classification.csv` — direction diagnostics (test)
+- `single_asset_signal_diagnostics.csv` — exposure, signal changes, net/gross return, cost impact
+- `single_asset_selected_thresholds.csv` — chosen thresholds per model/strategy
+- `single_asset_threshold_validation.csv` — validation sweep for LR/RF/GBC probability thresholds
+- `predictions_*.csv` — per-model prediction exports
+
+### Figures
+
+- Overall: `single_asset_model_equity_curves.png`, `single_asset_model_drawdowns.png`
+- Grouped: `single_asset_equity_benchmarks_statistical.png`, `single_asset_equity_models.png`, `single_asset_equity_dummy_baselines.png` (+ drawdown variants)
+- Rankings: `single_asset_total_return_ranking.png`, `single_asset_sharpe_ranking.png`, `single_asset_max_drawdown_ranking.png`
+
+Execute notebook top-to-bottom:
+
+```bash
+uv run jupyter nbconvert --execute notebooks/02_single_asset_models.ipynb --inplace
+```
 
 ## Run notebooks
 
