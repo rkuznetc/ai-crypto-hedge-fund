@@ -20,6 +20,7 @@ from crypto_hf.portfolio.estimators import (
     ledoit_wolf_covariance,
     sample_covariance,
 )
+from crypto_hf.portfolio.weight_projection import project_bounded_simplex
 
 
 @dataclass
@@ -62,10 +63,15 @@ def _clip_and_normalize(
     raw: pd.Series,
     config: OptimizerConfig,
 ) -> pd.Series:
-    clipped = raw.clip(lower=0.0 if not config.allow_short else None, upper=config.max_weight)
-    if clipped.sum() <= 0:
+    if raw.sum() <= 0:
         raise OptimizationError("All weights clipped to zero")
-    weights = normalize_weights(clipped)
+    normalized = normalize_weights(raw.clip(lower=0.0))
+    weights = project_bounded_simplex(
+        normalized,
+        config.min_weight,
+        config.max_weight,
+        allow_short=config.allow_short,
+    )
     validate_portfolio_weights(
         weights,
         allow_short=config.allow_short,
@@ -73,6 +79,37 @@ def _clip_and_normalize(
         max_weight=config.max_weight,
     )
     return weights
+
+
+def compute_inverse_volatility_weights(
+    returns_train: pd.DataFrame,
+    config: OptimizerConfig,
+) -> tuple[pd.Series, pd.Series, dict[str, float | str | bool]]:
+    """Compute inverse-volatility weights before and after box constraints."""
+    vol = returns_train.std()
+    if (vol <= 0).any() or vol.isna().any():
+        raise OptimizationError("Invalid volatilities for inverse-volatility weights")
+
+    annualized_vol = vol * np.sqrt(config.annualization_factor)
+    raw = 1.0 / annualized_vol
+    raw_normalized = normalize_weights(raw)
+    final = project_bounded_simplex(
+        raw_normalized,
+        config.min_weight,
+        config.max_weight,
+        allow_short=config.allow_short,
+    )
+    validate_portfolio_weights(
+        final,
+        allow_short=config.allow_short,
+        min_weight=config.min_weight,
+        max_weight=config.max_weight,
+    )
+    metadata: dict[str, float | str | bool] = {
+        "inverse_vol_fallback_applied": False,
+        "inverse_vol_fallback_reason": "",
+    }
+    return raw_normalized, final, metadata
 
 
 def _optimize_bounded_weights(
@@ -127,11 +164,10 @@ class InverseVolatilityOptimizer(BasePortfolioOptimizer):
         self.config = config
 
     def optimize(self, returns_train: pd.DataFrame) -> PortfolioWeights:
-        vol = returns_train.std()
-        if (vol <= 0).any() or vol.isna().any():
-            raise OptimizationError("Invalid volatilities for inverse-volatility weights")
-        raw = 1.0 / vol
-        weights = _clip_and_normalize(raw, self.config)
+        raw_normalized, weights, inv_meta = compute_inverse_volatility_weights(
+            returns_train,
+            self.config,
+        )
         return PortfolioWeights(
             name=self.name,
             weights=weights,
@@ -140,6 +176,8 @@ class InverseVolatilityOptimizer(BasePortfolioOptimizer):
                 "covariance_method": self.config.covariance_method,
                 "expected_return_method": self.config.expected_return_method,
                 "max_weight": self.config.max_weight,
+                "inverse_vol_raw_weights": raw_normalized.to_dict(),
+                **inv_meta,
             },
         )
 
