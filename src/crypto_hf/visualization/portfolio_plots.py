@@ -57,8 +57,26 @@ def plot_risk_return_scatter(
     x = metrics["annualized_volatility"]
     y = metrics["cagr"]
     ax.scatter(x, y, s=60)
-    for name, row in metrics.iterrows():
-        ax.annotate(name, (row["annualized_volatility"], row["cagr"]), fontsize=8)
+    offsets = [
+        (6, 6),
+        (-6, 6),
+        (6, -6),
+        (-6, -6),
+        (10, 0),
+        (0, 10),
+        (-10, 0),
+        (0, -10),
+    ]
+    for i, (name, row) in enumerate(metrics.iterrows()):
+        dx, dy = offsets[i % len(offsets)]
+        ax.annotate(
+            name,
+            (row["annualized_volatility"], row["cagr"]),
+            textcoords="offset points",
+            xytext=(dx, dy),
+            fontsize=8,
+            ha="center",
+        )
     ax.set_xlabel("Annualized Volatility")
     ax.set_ylabel("CAGR")
     ax.set_title(title)
@@ -76,6 +94,7 @@ def plot_portfolio_metric_rankings(
     save_path: str | Path | None = None,
 ) -> plt.Figure:
     """Plot horizontal ranking for one portfolio metric."""
+    # ascending=True places the largest (best) value at the top of horizontal bars.
     series = metrics[metric].sort_values(ascending=True)
     fig, ax = plt.subplots(figsize=(8, max(4, 0.4 * len(series))))
     ax.barh(series.index, series.values)
