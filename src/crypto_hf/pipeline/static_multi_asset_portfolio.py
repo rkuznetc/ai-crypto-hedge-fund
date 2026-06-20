@@ -9,6 +9,12 @@ from crypto_hf.config import StaticPortfolioConfig
 from crypto_hf.data.multi_asset_loader import load_multi_asset_ohlcv
 from crypto_hf.pipeline.baseline import split_train_test
 from crypto_hf.portfolio.backtesting import PortfolioBacktestResult, run_static_portfolio_backtest
+from crypto_hf.portfolio.benchmarks import (
+    BTC_ONLY_BENCHMARK_NAME,
+    CASH_BENCHMARK_NAME,
+    run_btc_only_benchmark,
+    run_cash_benchmark,
+)
 from crypto_hf.portfolio.optimizers import (
     EqualWeightOptimizer,
     HierarchicalRiskParityOptimizer,
@@ -17,10 +23,10 @@ from crypto_hf.portfolio.optimizers import (
     MinVarianceOptimizer,
     OptimizerConfig,
 )
-from crypto_hf.visualization.plots import (
-    export_metrics_table,
-    plot_drawdown_comparison,
-    plot_equity_curve,
+from crypto_hf.portfolio.reports import (
+    build_asset_risk_report,
+    build_asset_test_performance_report,
+    build_train_test_metrics_report,
 )
 from crypto_hf.visualization.portfolio_plots import (
     plot_correlation_heatmap,
@@ -28,6 +34,10 @@ from crypto_hf.visualization.portfolio_plots import (
     plot_portfolio_weights,
     plot_risk_return_scatter,
 )
+from crypto_hf.visualization.plots import plot_drawdown_comparison, plot_equity_curve
+
+# Train metrics use the same optimization window as weight selection (portfolio_lookback_days).
+TRAIN_METRICS_WINDOW = "optimization_window"
 
 
 @dataclass
@@ -41,6 +51,7 @@ class StaticPortfolioOutputs:
     test_returns: pd.DataFrame
     weights: pd.DataFrame
     results: dict[str, PortfolioBacktestResult]
+    train_results: dict[str, PortfolioBacktestResult]
     metrics: pd.DataFrame
     diagnostics: pd.DataFrame
     correlation_matrix: pd.DataFrame
@@ -66,6 +77,16 @@ def _select_train_window(train_returns: pd.DataFrame, lookback_days: int) -> pd.
     return train_returns.iloc[-lookback_days:].copy()
 
 
+def _backtest_kwargs(config: StaticPortfolioConfig) -> dict[str, float | int]:
+    return {
+        "initial_cash": config.initial_cash,
+        "fee_rate": config.fee_rate,
+        "slippage": config.slippage,
+        "annualization_factor": config.annualization_factor,
+        "risk_free_rate": config.risk_free_rate,
+    }
+
+
 def run_static_multi_asset_portfolio_pipeline(
     config: StaticPortfolioConfig,
     reports_dir: Path = Path("reports"),
@@ -81,6 +102,7 @@ def run_static_multi_asset_portfolio_pipeline(
     train_returns, test_returns = split_train_test(returns, config.train_size)
     test_close = close_prices.reindex(test_returns.index)
     train_window = _select_train_window(train_returns, config.portfolio_lookback_days)
+    train_close = close_prices.reindex(train_window.index)
     correlation_matrix = train_window.corr()
 
     optimizer_config = _build_optimizer_config(config)
@@ -94,6 +116,8 @@ def run_static_multi_asset_portfolio_pipeline(
 
     weight_rows: dict[str, pd.Series] = {}
     results: dict[str, PortfolioBacktestResult] = {}
+    train_results: dict[str, PortfolioBacktestResult] = {}
+    backtest_kwargs = _backtest_kwargs(config)
 
     for optimizer in optimizers:
         portfolio_weights = optimizer.optimize(train_window)
@@ -102,16 +126,58 @@ def run_static_multi_asset_portfolio_pipeline(
             name=optimizer.name,
             weights=portfolio_weights.weights,
             test_close_prices=test_close,
-            initial_cash=config.initial_cash,
-            fee_rate=config.fee_rate,
-            slippage=config.slippage,
-            annualization_factor=config.annualization_factor,
-            risk_free_rate=config.risk_free_rate,
+            **backtest_kwargs,
         )
+        train_results[optimizer.name] = run_static_portfolio_backtest(
+            name=optimizer.name,
+            weights=portfolio_weights.weights,
+            test_close_prices=train_close,
+            **backtest_kwargs,
+        )
+
+    results[BTC_ONLY_BENCHMARK_NAME] = run_btc_only_benchmark(
+        config.symbols,
+        test_close,
+        **backtest_kwargs,
+    )
+    train_results[BTC_ONLY_BENCHMARK_NAME] = run_btc_only_benchmark(
+        config.symbols,
+        train_close,
+        **backtest_kwargs,
+    )
+    weight_rows[BTC_ONLY_BENCHMARK_NAME] = results[BTC_ONLY_BENCHMARK_NAME].weights
+
+    results[CASH_BENCHMARK_NAME] = run_cash_benchmark(
+        config.symbols,
+        test_close.index,
+        initial_cash=config.initial_cash,
+    )
+    train_results[CASH_BENCHMARK_NAME] = run_cash_benchmark(
+        config.symbols,
+        train_close.index,
+        initial_cash=config.initial_cash,
+    )
+    weight_rows[CASH_BENCHMARK_NAME] = results[CASH_BENCHMARK_NAME].weights
 
     weights = pd.DataFrame(weight_rows).T
     metrics = pd.DataFrame({name: result.metrics for name, result in results.items()}).T
     diagnostics = pd.DataFrame({name: result.diagnostics for name, result in results.items()}).T
+
+    asset_risk = build_asset_risk_report(
+        config.symbols,
+        train_window,
+        test_returns,
+        close_prices,
+        weights,
+        optimizer_config,
+    )
+    asset_test_performance = build_asset_test_performance_report(
+        config.symbols,
+        test_returns,
+        weights,
+        config.annualization_factor,
+    )
+    train_test_metrics = build_train_test_metrics_report(results, train_results)
 
     metrics_dir = reports_dir / "metrics"
     figures_dir = reports_dir / "figures"
@@ -122,6 +188,9 @@ def run_static_multi_asset_portfolio_pipeline(
     metrics.to_csv(metrics_dir / "static_portfolio_metrics.csv")
     diagnostics.to_csv(metrics_dir / "static_portfolio_diagnostics.csv")
     correlation_matrix.to_csv(metrics_dir / "static_portfolio_correlation.csv")
+    asset_risk.to_csv(metrics_dir / "static_portfolio_asset_risk.csv")
+    asset_test_performance.to_csv(metrics_dir / "static_portfolio_asset_test_performance.csv")
+    train_test_metrics.to_csv(metrics_dir / "static_portfolio_train_test_metrics.csv")
 
     equity_curves = {name: result.equity_curve for name, result in results.items()}
     plot_equity_curve(
@@ -135,7 +204,7 @@ def run_static_multi_asset_portfolio_pipeline(
         save_path=figures_dir / "static_portfolio_drawdowns.png",
     )
     plot_portfolio_weights(
-        weights,
+        weights.drop(index=[CASH_BENCHMARK_NAME], errors="ignore"),
         title="Static Portfolio Weights",
         save_path=figures_dir / "static_portfolio_weights.png",
     )
@@ -155,6 +224,24 @@ def run_static_multi_asset_portfolio_pipeline(
         title="Sharpe Ratio Ranking (test)",
         save_path=figures_dir / "static_portfolio_metric_rankings.png",
     )
+    plot_portfolio_metric_rankings(
+        metrics,
+        metric="total_return",
+        title="Total Return Ranking (test)",
+        save_path=figures_dir / "static_portfolio_total_return_ranking.png",
+    )
+    plot_portfolio_metric_rankings(
+        metrics,
+        metric="sharpe_ratio",
+        title="Sharpe Ratio Ranking (test)",
+        save_path=figures_dir / "static_portfolio_sharpe_ranking.png",
+    )
+    plot_portfolio_metric_rankings(
+        metrics,
+        metric="max_drawdown",
+        title="Max Drawdown Ranking (test)",
+        save_path=figures_dir / "static_portfolio_max_drawdown_ranking.png",
+    )
 
     _close_all_figures()
 
@@ -166,6 +253,7 @@ def run_static_multi_asset_portfolio_pipeline(
         test_returns=test_returns,
         weights=weights,
         results=results,
+        train_results=train_results,
         metrics=metrics,
         diagnostics=diagnostics,
         correlation_matrix=correlation_matrix,
