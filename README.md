@@ -106,15 +106,31 @@ Portfolio methods (weights fixed at test start, buy-and-hold, no rebalancing):
 | Method | Description |
 |--------|-------------|
 | `equal_weight` | 1/N baseline |
-| `inverse_volatility` | naive risk parity |
+| `inverse_volatility` | inverse annualized volatility weights |
 | `min_variance` | minimum variance on train covariance |
 | `max_sharpe` | maximum Sharpe on train estimates |
 | `hrp` | hierarchical risk parity (clustering-based) |
 
-Reports:
+Benchmark portfolios:
+
+| Method | Description |
+|--------|-------------|
+| `btc_only` | 100% BTC/USDT buy-and-hold (`is_benchmark=True`) |
+| `cash` | flat equity, zero exposure — diagnostic only (`is_investable_crypto_portfolio=False`) |
+
+Reports (`reports/metrics/`):
 
 - `static_portfolio_weights.csv`, `static_portfolio_metrics.csv`, `static_portfolio_diagnostics.csv`, `static_portfolio_correlation.csv`
-- `static_portfolio_equity_curves.png`, drawdowns, weights heatmap, correlation heatmap, risk-return scatter
+- `static_portfolio_asset_risk.csv` — per-asset train/test risk and inverse-vol weights
+- `static_portfolio_asset_test_performance.csv` — per-asset test performance and optimizer weights
+- `static_portfolio_train_test_metrics.csv` — train vs test decay diagnostics (train window = optimization lookback)
+
+Figures (`reports/figures/`):
+
+- equity curves, drawdowns, weights heatmap, correlation heatmap, risk-return scatter
+- `static_portfolio_total_return_ranking.png`, `static_portfolio_sharpe_ranking.png`, `static_portfolio_max_drawdown_ranking.png`
+
+Multi-asset CSVs must exist in `data/raw/` (bundled or downloaded via `scripts/download_multi_asset_ohlcv.py`).
 
 ```bash
 uv run jupyter nbconvert --execute notebooks/03_static_multi_asset_portfolio.ipynb --inplace
