@@ -36,15 +36,75 @@ class BaselineConfig(BaseModel):
         return slow_window
 
 
+class SingleAssetModelsConfig(BaselineConfig):
+    """Configuration for single-asset model comparison pipeline."""
+
+    return_lags: list[int] = Field(default_factory=lambda: [1, 2, 3, 5])
+    rolling_mean_windows: list[int] = Field(default_factory=lambda: [5, 10, 20])
+    rolling_vol_windows: list[int] = Field(default_factory=lambda: [10, 20])
+    momentum_windows: list[int] = Field(default_factory=lambda: [5, 10, 20])
+    sma_ratio_windows: list[int] = Field(default_factory=lambda: [10, 20])
+    rsi_window: int = Field(default=14, gt=0)
+    econometric_lags: int = Field(default=5, gt=0)
+    econometric_use_cost_threshold: bool = True
+    ml_probability_threshold: float = Field(default=0.5, gt=0, lt=1)
+    logistic_regression_c: float = Field(default=1.0, gt=0)
+    logistic_regression_max_iter: int = Field(default=1000, gt=0)
+    enable_random_forest: bool = True
+    random_forest_n_estimators: int = Field(default=100, gt=0)
+    enable_gradient_boosting: bool = True
+    gradient_boosting_n_estimators: int = Field(default=100, gt=0)
+    enable_ridge_regression: bool = True
+    ridge_alpha: float = Field(default=1.0, gt=0)
+    enable_dummy_baselines: bool = True
+    validation_size_within_train: float = Field(default=0.2, gt=0, lt=1)
+    ml_threshold_candidates: list[float] = Field(default_factory=lambda: [0.45, 0.5, 0.55, 0.6])
+    zscore_window: int = Field(default=20, gt=0)
+    zscore_entry_threshold: float = -1.0
+    zscore_exit_threshold: float = 1.0
+    breakout_window: int = Field(default=20, gt=0)
+    stat_momentum_threshold: float = 0.0
+    vol_regime_window: int = Field(default=20, gt=0)
+    vol_regime_threshold: float = Field(default=0.5, gt=0)
+    vol_regime_use_quantile: bool = True
+    vol_regime_quantile: float = Field(default=0.7, gt=0, lt=1)
+    enable_ensemble_majority_vote: bool = True
+    ensemble_components: list[str] = Field(
+        default_factory=lambda: [
+            "sma_crossover",
+            "econometric_autoreg",
+            "ml_gradient_boosting",
+            "ml_ridge_regression",
+            "stat_momentum_breakout",
+        ]
+    )
+    ensemble_min_votes: int = Field(default=3, gt=0)
+
+
+def _resolve_data_path(config: BaselineConfig, config_path: Path) -> BaselineConfig:
+    if not config.data_path.is_absolute():
+        project_root = config_path.parent.parent
+        return config.model_copy(
+            update={"data_path": (project_root / config.data_path).resolve()}
+        )
+    return config
+
+
 def load_config(path: str | Path = "configs/baseline.yaml") -> BaselineConfig:
     """Load baseline experiment config from a YAML file."""
     config_path = Path(path).resolve()
     with config_path.open("r", encoding="utf-8") as handle:
         raw = yaml.safe_load(handle) or {}
     config = BaselineConfig(**raw)
-    if not config.data_path.is_absolute():
-        project_root = config_path.parent.parent
-        config = config.model_copy(
-            update={"data_path": (project_root / config.data_path).resolve()}
-        )
-    return config
+    return _resolve_data_path(config, config_path)
+
+
+def load_single_asset_models_config(
+    path: str | Path = "configs/single_asset_models.yaml",
+) -> SingleAssetModelsConfig:
+    """Load single-asset models experiment config from YAML."""
+    config_path = Path(path).resolve()
+    with config_path.open("r", encoding="utf-8") as handle:
+        raw = yaml.safe_load(handle) or {}
+    config = SingleAssetModelsConfig(**raw)
+    return _resolve_data_path(config, config_path)
