@@ -153,3 +153,53 @@ def plot_metrics_table(
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
     return fig
+
+
+def plot_metric_ranking(
+    metrics_by_strategy: dict[str, dict[str, float]],
+    metric: str,
+    title: str,
+    save_path: str | Path | None = None,
+    *,
+    ascending: bool | None = None,
+) -> plt.Figure:
+    """Plot a horizontal bar chart ranking strategies by one metric.
+
+    Bars render bottom-to-top, so ascending sort puts the best values at the top
+    for return-like metrics (higher is better) and for max drawdown (less negative
+    is better).
+    """
+    values = {name: float(data.get(metric, 0.0)) for name, data in metrics_by_strategy.items()}
+    series = pd.Series(values)
+    if ascending is None:
+        ascending = True
+    series = series.sort_values(ascending=ascending)
+
+    fig, ax = plt.subplots(figsize=(10, max(4, 0.35 * len(series))))
+    ax.barh(series.index, series.values)
+    ax.set_title(title)
+    ax.set_xlabel(metric)
+    ax.grid(True, axis="x", alpha=0.3)
+    fig.tight_layout()
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    return fig
+
+
+def plot_grouped_equity_and_drawdowns(
+    equity_curves: dict[str, pd.Series],
+    strategy_names: list[str],
+    equity_title: str,
+    drawdown_title: str,
+    equity_save_path: str | Path | None = None,
+    drawdown_save_path: str | Path | None = None,
+) -> tuple[plt.Figure, plt.Figure]:
+    """Plot equity and drawdown charts for a subset of strategies."""
+    subset = {name: equity_curves[name] for name in strategy_names if name in equity_curves}
+    equity_fig = plot_equity_curve(subset, title=equity_title, save_path=equity_save_path)
+    drawdown_fig = plot_drawdown_comparison(
+        subset,
+        title=drawdown_title,
+        save_path=drawdown_save_path,
+    )
+    return equity_fig, drawdown_fig
