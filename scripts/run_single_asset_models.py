@@ -25,6 +25,13 @@ def main() -> None:
     print(outputs.trading_metrics.to_string(float_format=lambda x: f"{x:.4f}"))
     print("\nClassification metrics (test):")
     print(outputs.classification_metrics.to_string(float_format=lambda x: f"{x:.4f}"))
+    print("\nSignal diagnostics (test):")
+    print(outputs.signal_diagnostics.to_string(float_format=lambda x: f"{x:.4f}"))
+    print("\nSelected thresholds:")
+    print(outputs.selected_thresholds.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
+    if not outputs.threshold_validation.empty:
+        print("\nThreshold validation (validation split):")
+        print(outputs.threshold_validation.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
     print("\nReports saved to reports/metrics/ and reports/figures/")
 
 
