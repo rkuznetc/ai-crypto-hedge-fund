@@ -55,7 +55,7 @@ def build_model_features(
         out["volume_change"] = out["volume"].pct_change()
 
     out[f"rsi_{rsi_window}"] = _rsi(out["close"], window=rsi_window)
-    return out
+    return out.replace([np.inf, -np.inf], np.nan)
 
 
 def drop_rows_with_missing_features(
