@@ -1,8 +1,8 @@
 # AI Crypto Hedge Fund MVP
 
-Educational MVP for offline historical backtesting of a single crypto pair (**BTC/USDT**, 1d). This project provides data validation, baseline strategies, econometric/ML model strategies, VectorBT backtesting, performance metrics, plots, tests, and reproducible notebooks.
+Educational MVP for offline historical backtesting of crypto markets (1d). This project provides data validation, baseline strategies, econometric/ML model strategies, static multi-asset portfolios, VectorBT backtesting, performance metrics, plots, tests, and reproducible notebooks.
 
-Bundled OHLCV data lives at `data/raw/BTC_USDT_1d.csv` (tracked in git). Replace or refresh it via `scripts/download_ohlcv.py` without changing application code.
+Bundled OHLCV data lives at `data/raw/BTC_USDT_1d.csv` (tracked in git). Multi-asset CSVs use the same schema and naming: `{BASE}_{QUOTE}_{timeframe}.csv` (e.g. `ETH_USDT_1d.csv`).
 
 ## Project structure
 
@@ -38,7 +38,10 @@ To download fresh OHLCV (optional, requires internet):
 ```bash
 cp .env.example .env
 uv run python scripts/download_ohlcv.py --symbol BTC/USDT --timeframe 1d
+uv run python scripts/download_multi_asset_ohlcv.py
 ```
+
+The multi-asset downloader reads symbols from `configs/static_multi_asset_portfolio.yaml` and writes one CSV per symbol to `data/raw/`.
 
 ## Run tests
 
@@ -90,11 +93,39 @@ Execute notebook top-to-bottom:
 uv run jupyter nbconvert --execute notebooks/02_single_asset_models.ipynb --inplace
 ```
 
+## Run static multi-asset portfolio
+
+```bash
+uv run python scripts/run_static_multi_asset_portfolio.py
+```
+
+Requires CSV files for all symbols in `configs/static_multi_asset_portfolio.yaml` (download via `scripts/download_multi_asset_ohlcv.py`).
+
+Portfolio methods (weights fixed at test start, buy-and-hold, no rebalancing):
+
+| Method | Description |
+|--------|-------------|
+| `equal_weight` | 1/N baseline |
+| `inverse_volatility` | naive risk parity |
+| `min_variance` | minimum variance on train covariance |
+| `max_sharpe` | maximum Sharpe on train estimates |
+| `hrp` | hierarchical risk parity (clustering-based) |
+
+Reports:
+
+- `static_portfolio_weights.csv`, `static_portfolio_metrics.csv`, `static_portfolio_diagnostics.csv`, `static_portfolio_correlation.csv`
+- `static_portfolio_equity_curves.png`, drawdowns, weights heatmap, correlation heatmap, risk-return scatter
+
+```bash
+uv run jupyter nbconvert --execute notebooks/03_static_multi_asset_portfolio.ipynb --inplace
+```
+
 ## Run notebooks
 
 ```bash
 uv run jupyter notebook notebooks/01_baseline_single_asset.ipynb
 uv run jupyter notebook notebooks/02_single_asset_models.ipynb
+uv run jupyter notebook notebooks/03_static_multi_asset_portfolio.ipynb
 ```
 
 Notebooks import logic from `src/crypto_hf` and run top-to-bottom against the bundled CSV.
@@ -114,8 +145,8 @@ docker run --rm crypto-hf
 - **No look-ahead bias:** `signal[t] → position[t+1] → entry at close[t+1]`.
 - **Backtest hardening:** `VectorbtBacktester` rejects non-binary positions (`0.0`/`1.0`), enforces strict index alignment by default, and supports configurable `slippage`.
 - **Model strategies:** AR return model (`statsmodels`) and sklearn direction classifiers share the same backtester and test-period evaluation.
-- **Modular:** strategies implement `BaseStrategy.generate_signals()`; backtests return `BacktestResult`.
+- **Modular:** strategies implement `BaseStrategy.generate_signals()`; portfolio optimizers implement `BasePortfolioOptimizer.optimize()`; backtests return `BacktestResult` / `PortfolioBacktestResult`.
 
 ## Roadmap (not in this block)
 
-LLM agents, portfolio optimization, dynamic rebalancing, live trading, and multi-asset expansion.
+LLM agents, dynamic rebalancing, live trading, and 100+ pair scaling.
