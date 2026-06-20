@@ -52,6 +52,33 @@ class SingleAssetModelsConfig(BaselineConfig):
     logistic_regression_max_iter: int = Field(default=1000, gt=0)
     enable_random_forest: bool = True
     random_forest_n_estimators: int = Field(default=100, gt=0)
+    enable_gradient_boosting: bool = True
+    gradient_boosting_n_estimators: int = Field(default=100, gt=0)
+    enable_ridge_regression: bool = True
+    ridge_alpha: float = Field(default=1.0, gt=0)
+    enable_dummy_baselines: bool = True
+    validation_size_within_train: float = Field(default=0.2, gt=0, lt=1)
+    ml_threshold_candidates: list[float] = Field(default_factory=lambda: [0.45, 0.5, 0.55, 0.6])
+    zscore_window: int = Field(default=20, gt=0)
+    zscore_entry_threshold: float = -1.0
+    zscore_exit_threshold: float = 1.0
+    breakout_window: int = Field(default=20, gt=0)
+    stat_momentum_threshold: float = 0.0
+    vol_regime_window: int = Field(default=20, gt=0)
+    vol_regime_threshold: float = Field(default=0.5, gt=0)
+    vol_regime_use_quantile: bool = True
+    vol_regime_quantile: float = Field(default=0.7, gt=0, lt=1)
+    enable_ensemble_majority_vote: bool = True
+    ensemble_components: list[str] = Field(
+        default_factory=lambda: [
+            "sma_crossover",
+            "econometric_autoreg",
+            "ml_gradient_boosting",
+            "ml_ridge_regression",
+            "stat_momentum_breakout",
+        ]
+    )
+    ensemble_min_votes: int = Field(default=3, gt=0)
 
 
 def _resolve_data_path(config: BaselineConfig, config_path: Path) -> BaselineConfig:

@@ -6,6 +6,7 @@ fee_rate: 0.001
 slippage: 0.0
 annualization_factor: 365
 train_size: 0.7
+validation_size_within_train: 0.2
 fast_window: 10
 slow_window: 30
 volatility_window: 20
@@ -18,7 +19,30 @@ rsi_window: 14
 econometric_lags: 5
 econometric_use_cost_threshold: true
 ml_probability_threshold: 0.5
+ml_threshold_candidates: [0.45, 0.5, 0.55, 0.6]
 logistic_regression_c: 1.0
 logistic_regression_max_iter: 1000
 enable_random_forest: true
 random_forest_n_estimators: 100
+enable_gradient_boosting: true
+gradient_boosting_n_estimators: 100
+enable_ridge_regression: true
+ridge_alpha: 1.0
+enable_dummy_baselines: true
+zscore_window: 20
+zscore_entry_threshold: -1.0
+zscore_exit_threshold: 1.0
+breakout_window: 20
+stat_momentum_threshold: 0.0
+vol_regime_window: 20
+vol_regime_threshold: 0.5
+vol_regime_use_quantile: true
+vol_regime_quantile: 0.7
+enable_ensemble_majority_vote: true
+ensemble_components:
+  - sma_crossover
+  - econometric_autoreg
+  - ml_gradient_boosting
+  - ml_ridge_regression
+  - stat_momentum_breakout
+ensemble_min_votes: 3
