@@ -83,6 +83,8 @@ def run_static_portfolio_backtest(
     diversification_ratio = weighted_vol / port_vol if port_vol > 0 else 0.0
 
     hhi = float((weights**2).sum())
+    positive = weights[weights > 0]
+    largest_symbol = str(positive.idxmax()) if not positive.empty else ""
     diagnostics = {
         "concentration_hhi": hhi,
         "effective_number_of_assets": 1.0 / hhi if hhi > 0 else 0.0,
@@ -90,6 +92,11 @@ def run_static_portfolio_backtest(
         "max_asset_weight": float(weights.max()),
         "min_asset_weight": float(weights.min()),
         "diversification_ratio": diversification_ratio,
+        "largest_weight_symbol": largest_symbol,
+        "number_of_assets_with_weight_gt_5pct": float((weights > 0.05).sum()),
+        "number_of_assets_with_weight_gt_10pct": float((weights > 0.10).sum()),
+        "is_benchmark": 0.0,
+        "is_investable_crypto_portfolio": 1.0,
     }
 
     return PortfolioBacktestResult(
