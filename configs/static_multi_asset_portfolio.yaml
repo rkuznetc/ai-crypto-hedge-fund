@@ -1,0 +1,27 @@
+symbols:
+  - BTC/USDT
+  - ETH/USDT
+  - BNB/USDT
+  - SOL/USDT
+  - XRP/USDT
+  - ADA/USDT
+  - DOGE/USDT
+
+timeframe: 1d
+data_dir: data/raw
+initial_cash: 10000.0
+fee_rate: 0.001
+slippage: 0.0
+annualization_factor: 365
+
+train_size: 0.7
+portfolio_lookback_days: 365
+
+min_weight: 0.0
+max_weight: 0.35
+allow_short: false
+
+risk_free_rate: 0.0
+covariance_method: ledoit_wolf
+expected_return_method: historical_mean
+ewm_span: 60
